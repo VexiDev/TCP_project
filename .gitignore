@@ -1,0 +1,22 @@
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# MacOS
+.DS_Store
+
+# Zig build artifacts
+.zig-cache/
+zig-out/
+
+# Build artifacts from C/C++
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
