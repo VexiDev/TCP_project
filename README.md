@@ -1,8 +1,12 @@
 # TCP Project
 <br>
+
 A **VERY** basic and raw custom TCP implementation.
+
 <br><br>
+
 Initial Steps: *subject to change as I learn more about this*
+
 - [ ] Learn how to create raw sockets in Zig
 - [ ] Define a very watered down TCP packet header
 - [ ] Create a Server struct that:
