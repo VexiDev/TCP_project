@@ -2,9 +2,30 @@ const std = @import("std");
 const posix = std.posix;
 const net = std.net;
 
-const AF_INET: u32 = 2;
-const SOCK_RAW: u32 = 3;
-const IPPROTO_TESTING: u32 = 253;
+const Flags = union(enum) {
+    CWR: bool,
+    ECE: bool,
+    URG: bool,
+    ACK: bool,
+    PSH: bool,
+    RST: bool,
+    SYN: bool,
+    FIN: bool,
+};
+
+const TcpHeader = struct {
+    source_port: u16,
+    destination_port: u16,
+    sequence: u32,
+    ack_num: u32,
+    data_offset: u4,
+    reserved: u4,
+    active_flag: Flags,
+    checksum: u16,
+    urgent_pointer: u16,
+    // options: u32,
+
+};
 
 pub fn main() !void {
 
