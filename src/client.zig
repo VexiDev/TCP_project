@@ -11,13 +11,24 @@ pub fn main() !void {
     // Set destination address (server address)
     const dest_addr = try net.Address.parseIp4("127.0.0.1", 4000);
 
-    // Message to send
-    const message = "Salut le Monde!";
+    while (true) {
+        const stdin = std.io.getStdIn().reader();
+        const stdout = std.io.getStdOut().writer();
 
-    for (0..500) |i| {
+        try stdout.writeAll("Enter message to send: ");
+
+        const bare_line = try stdin.readUntilDelimiterAlloc(
+            std.heap.page_allocator,
+            '\n',
+            8192,
+        );
+        defer std.heap.page_allocator.free(bare_line);
+
+        // Message to send
+        const message = std.mem.trim(u8, bare_line, "\r");
+
         // Send the message to the server
         const bytes_sent = try posix.sendto(client_socket, message, 0, &dest_addr.any, dest_addr.getOsSockLen());
-        std.debug.print("{d} - Sent {d} bytes to server\n", .{i, bytes_sent});
+        std.debug.print("-> Sent {d} bytes to server\n", .{ bytes_sent });
     }
 }
-
