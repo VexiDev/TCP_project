@@ -54,6 +54,14 @@ pub fn main() !void {
         const bytes_received = try posix.recvfrom(server_socket, &buffer, 0, &src_addr, &src_addr_len);
         std.debug.print("{d} - Received {d} bytes from {any}\n", .{ i, bytes_received, src_addr.data[2..6] });
 
-        std.debug.print("{d} - Received {d} bytes from {any}\n", .{i, bytes_received, src_addr.data[2..6]});
+        // Output message
+        std.debug.print("Data: ", .{});
+        for (buffer[20..]) |b| {
+            if (b == 170) {
+                continue;
+            }
+            std.debug.print("{c}", .{b});
+        }
+        std.debug.print("\n", .{});
     }
 }
