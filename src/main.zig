@@ -42,15 +42,17 @@ pub fn main() !void {
     };
 
     std.debug.print("Waiting for packets on raw socket...\n", .{});
-    var i: u32 = 0;
+
+    var i: u32 = 1;
     while (true) : (i += 1) {
         // Buffer for receiving packets
-        var buffer: [2048]u8 = undefined;
+        var buffer: [1068]u8 = undefined;
         var src_addr: posix.sockaddr = undefined;
         var src_addr_len: posix.socklen_t = @sizeOf(posix.sockaddr);
 
         // Receive raw packets
         const bytes_received = try posix.recvfrom(server_socket, &buffer, 0, &src_addr, &src_addr_len);
+        std.debug.print("{d} - Received {d} bytes from {any}\n", .{ i, bytes_received, src_addr.data[2..6] });
 
         std.debug.print("{d} - Received {d} bytes from {any}\n", .{i, bytes_received, src_addr.data[2..6]});
     }
