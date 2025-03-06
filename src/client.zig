@@ -1,4 +1,5 @@
 const std = @import("std");
+const protocol = @import("./protocol.zig");
 const posix = std.posix;
 const net = std.net;
 
@@ -27,8 +28,21 @@ pub fn main() !void {
         // Message to send
         const message = std.mem.trim(u8, bare_line, "\r");
 
+        // Make and Serialize TCP header
+        var hdr = protocol.Header{ .srcport = 4001, .destport = 4000 };
+        var bufr: [24]u8 = undefined;
+        _ = try hdr.serialize(&bufr);
+
+        // Build final packet of header + message
+        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        defer arena.deinit();
+        const allocator = arena.allocator();
+
+        const packet = try std.fmt.allocPrint(allocator, "{s}{s}", .{ bufr, message});
+        defer allocator.free(packet);
+
         // Send the message to the server
-        const bytes_sent = try posix.sendto(client_socket, message, 0, &dest_addr.any, dest_addr.getOsSockLen());
-        std.debug.print("-> Sent {d} bytes to server\n", .{ bytes_sent });
+        const bytes_sent = try posix.sendto(client_socket, packet, 0, &dest_addr.any, dest_addr.getOsSockLen());
+        std.debug.print("-> Sent {d} bytes to server\n", .{bytes_sent});
     }
 }
