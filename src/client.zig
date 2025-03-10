@@ -4,11 +4,12 @@ const posix = std.posix;
 const net = std.net;
 
 pub fn main() !void {
-    const conn = try protocol.Connection.init( //
-        protocol.Address{ .addr = "127.0.0.1", .port = 4001 }, // src addr
-        protocol.Address{ .addr = "127.0.0.1", .port = 4000 }, // dest addr
-    );
-    defer conn.close();
+    const destaddr = try net.Address.parseIp4("127.0.0.1", 4000);
+    
+    const client_sock = try posix.socket(posix.AF.INET, posix.SOCK.STREAM, 0);
+    defer posix.close(client_sock);
+    
+    try posix.connect(client_sock, &destaddr.any, destaddr.getOsSockLen());
 
     while (true) {
         const stdin = std.io.getStdIn().reader();
@@ -27,6 +28,6 @@ pub fn main() !void {
         const message = std.mem.trim(u8, bare_line, "\r");
 
         // Send the message to the server
-        _ = try conn.send(message);
+        _ = try posix.send(client_sock, message, 0);
     }
 }
