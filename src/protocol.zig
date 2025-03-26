@@ -17,6 +17,18 @@ pub const Status = union(enum) { //
     CLOSED,
 };
 
+pub const FLAG = enum(u8) { //
+    CWR = 1,
+    ECE = 2,
+    URG = 4,
+    ACK = 8,
+    PSH = 16,
+    RST = 32,
+    SYN = 64,
+    FIN = 128,
+    SYN_ACK = 8 & 64,
+};
+
 const addr_pair = struct {
     src_addr: [4]u8,
     src_port: u16,
@@ -47,8 +59,6 @@ const TCB = struct {
 
     last_ack_time: i64, // ms since 1970-01-01
 };
-
-//
 
 const TCP = struct {
     allocator: std.heap.ArenaAllocator,
