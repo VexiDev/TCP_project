@@ -17,6 +17,28 @@ pub const Status = union(enum) { //
     CLOSED,
 };
 
+
+// Transport Control Block
+const TCB = struct {
+    status: Status,
+
+    addr_pair: *addr_pair,
+
+    una_seq: u32, // unacknowledged seq number (current)
+    nxt_seq: u32, // next sequence number
+    nxt_rcv: u32, // next expected sequence number
+
+    rcv_wnd: u16, // receive window size
+    snd_wnd: u16, // send window size
+
+    rcv_bfr: *[]const u8, // receive buffer
+    snd_bfr: *[]const u8, // send buffer
+
+    last_ack_time: i64, // ms since 1970-01-01
+};
+
+//
+
 const TCP = struct {
     allocator: std.heap.ArenaAllocator,
     // TCB_tbl:
