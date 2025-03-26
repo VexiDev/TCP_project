@@ -17,6 +17,17 @@ pub const Status = union(enum) { //
     CLOSED,
 };
 
+const addr_pair = struct {
+    src_addr: [4]u8,
+    src_port: u16,
+    dst_addr: [4]u8,
+    dst_port: u16,
+};
+
+const StreamSocket = struct {
+    sockid: u16,
+    socket_t: posix.socket_t,
+};
 
 // Transport Control Block
 const TCB = struct {
