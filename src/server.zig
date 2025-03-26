@@ -5,19 +5,20 @@ const net = std.net;
 
 pub fn main() !void {
 
-    // Creates a raw socket using an unused protocol
+    // Creates a TCP socket
     const server_sock = try posix.socket(posix.AF.INET, posix.SOCK.STREAM, 0);
     defer posix.close(server_sock);
 
     const addr = try net.Address.parseIp4("127.0.0.1", 4000);
 
-    // Apparently bind is optional for raw sockets? research
+    // bind socket to address
     posix.bind(server_sock, &addr.any, addr.getOsSockLen()) catch |err| {
         std.debug.print("Bind FAILED: {any}\n", .{err});
     };
-
+    
+    // listen for incoming connections
     try posix.listen(server_sock, 10);
-    std.debug.print("Waiting for packets on raw socket...\n", .{});
+    std.debug.print("Waiting for packets on socket...\n", .{});
 
     // accept connection
     var src_addr: posix.sockaddr = undefined;
