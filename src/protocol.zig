@@ -60,20 +60,20 @@ const TCB = struct {
     last_ack_time: i64, // ms since 1970-01-01
 };
 
-const TCP = struct {
+const StateMachine = struct {
     allocator: std.heap.ArenaAllocator,
     // TCB_tbl:
     // SOCK_tbl
 
     // Initialize Protocol
-    pub fn init() TCP {
+    pub fn init() StateMachine {
         // Init protocol allocator
         // Init Socket table
         // Init TCB table
     }
 
     // Cleanly shutdown the protocol
-    pub fn shutdown(self: *TCP) void {
+    pub fn shutdown(self: *StateMachine) void {
         // Prevents new connections
         // Resets existing connections
         // Free all allocated memory
