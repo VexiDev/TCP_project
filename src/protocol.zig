@@ -37,7 +37,7 @@ const addr_pair = struct {
 };
 
 const StreamSocket = struct {
-    sockid: u16,
+    id: u16,
     socket_t: posix.socket_t,
 };
 
