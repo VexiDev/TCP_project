@@ -48,6 +48,39 @@ const TCB = struct {
     dest_addr: Ip4Address,
 
     last_ack_time: i64, // ms since 1970-01-01
+
+    pub fn init(
+        src_addr: Ip4Address,
+        dest_addr: Ip4Address,
+        alloc: *std.heap.ArenaAllocator,
+    ) !TCB {
+        const allocator = alloc.allocator();
+
+        // init buffers
+        const rcv_bfr = try allocator.alloc(u8, 1000);
+        @memset(rcv_bfr, 0);
+        const snd_bfr = try allocator.alloc(u8, 1000);
+        @memset(snd_bfr, 0);
+
+        return TCB{
+            .status = Status.CLOSED,
+
+            .una_seq = 1,
+            .nxt_rcv = 1,
+            .nxt_seq = 2,
+
+            .rcv_wnd = 1000,
+            .snd_wnd = 1000,
+
+            .rcv_bfr = rcv_bfr,
+            .snd_bfr = snd_bfr,
+
+            .src_addr = src_addr,
+            .dest_addr = dest_addr,
+
+            .last_ack_time = 0,
+        };
+    }
 };
 
 const StateMachine = struct {
