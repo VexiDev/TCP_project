@@ -190,49 +190,69 @@ pub const StateMachine = struct {
         var packet_buffer: [max_packet_size]u8 = undefined;
 
         // IP Header
-        packet_buffer[0] = 0x45; // Version+IHL
-        packet_buffer[1] = 0x00; // TOS
+
+        // Version+IHL
+        packet_buffer[0] = 0x45;
+        // TOS
+        packet_buffer[1] = 0x00;
+        // Total length (0x0037)
         packet_buffer[2] = 0x00;
-        packet_buffer[3] = 0x37; // Total length (0x0037)
+        packet_buffer[3] = 0x37;
+        // ID
         packet_buffer[4] = 0x00;
-        packet_buffer[5] = 0x00; // ID
+        packet_buffer[5] = 0x00;
+        // Flags+Fragment offset
         packet_buffer[6] = 0x00;
-        packet_buffer[7] = 0x00; // Flags+Fragment offset
-        packet_buffer[8] = 64; // TTL
-        packet_buffer[9] = 6; // Protocol (TCP)
+        packet_buffer[7] = 0x00;
+        // TTL
+        packet_buffer[8] = 64;
+        // Protocol (TCP)
+        packet_buffer[9] = 6;
+        // Header checksum
         packet_buffer[10] = 0x22;
-        packet_buffer[11] = 0xAE; // Header checksum
+        packet_buffer[11] = 0xAE;
+        // Source IP
         packet_buffer[12] = 172;
         packet_buffer[13] = 25;
         packet_buffer[14] = 0;
-        packet_buffer[15] = 3; // Source IP
+        packet_buffer[15] = 3;
+        // Destination IP
         packet_buffer[16] = 172;
         packet_buffer[17] = 25;
         packet_buffer[18] = 0;
-        packet_buffer[19] = 2; // Destination IP
+        packet_buffer[19] = 2;
 
         // TCP Header
         const tcp_start = ip_len;
+        // Source port (4001)
         packet_buffer[tcp_start + 0] = 0x0F;
-        packet_buffer[tcp_start + 1] = 0xA1; // Source port (4001)
+        packet_buffer[tcp_start + 1] = 0xA1;
+        // Destination port (4000)
         packet_buffer[tcp_start + 2] = 0x0F;
-        packet_buffer[tcp_start + 3] = 0xA0; // Destination port (4000)
+        packet_buffer[tcp_start + 3] = 0xA0;
+        // Seq num
         packet_buffer[tcp_start + 4] = 0x00;
         packet_buffer[tcp_start + 5] = 0x00;
         packet_buffer[tcp_start + 6] = 0x00;
-        packet_buffer[tcp_start + 7] = 0x00; // Seq num
+        packet_buffer[tcp_start + 7] = 0x00;
+        // Ack num
         packet_buffer[tcp_start + 8] = 0x00;
         packet_buffer[tcp_start + 9] = 0x00;
         packet_buffer[tcp_start + 10] = 0x00;
-        packet_buffer[tcp_start + 11] = 0x00; // Ack num
-        packet_buffer[tcp_start + 12] = 0x50; // Data offset (5 << 4), Reserved
-        packet_buffer[tcp_start + 13] = 0x02; // Flags (SYN)
+        packet_buffer[tcp_start + 11] = 0x00;
+        // Data offset (5 << 4), Reserved
+        packet_buffer[tcp_start + 12] = 0x50;
+        // Flags (SYN)
+        packet_buffer[tcp_start + 13] = 0x02;
+        // Window size (8192)
         packet_buffer[tcp_start + 14] = 0x20;
-        packet_buffer[tcp_start + 15] = 0x00; // Window size (8192)
+        packet_buffer[tcp_start + 15] = 0x00;
+        // Checksum
         packet_buffer[tcp_start + 16] = 0x51;
-        packet_buffer[tcp_start + 17] = 0x85; // Checksum
+        packet_buffer[tcp_start + 17] = 0x85;
+        // Urgent pointer
         packet_buffer[tcp_start + 18] = 0x00;
-        packet_buffer[tcp_start + 19] = 0x00; // Urgent pointer
+        packet_buffer[tcp_start + 19] = 0x00;
 
         // Data
         const data_start = ip_len + tcp_len;
