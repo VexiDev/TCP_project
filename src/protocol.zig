@@ -164,7 +164,91 @@ pub const StateMachine = struct {
     //pub fn accept(self: *StateMachine) !void {}
 
     // Sends data to a connected destination
-    pub fn send() !usize {}
+    pub fn send(self: *StateMachine, socket_t: posix.socket_t, buf: *[]const u8) !usize {
+        // Get socket info:
+        // -> Get destination from TCB block
+        const dest_addr: ?Ip4Address = self.connections.get(socket_t);
+        if (dest_addr == null) return error.SocketNotConnected;
+        const connection_TCB: ?*TCB = self.TCB_table.get(dest_addr.?);
+        if (connection_TCB == null) return error.AddressMissingTCB;
+
+        // IP:
+        // -> Build IP header
+
+        // TCP:
+        // -> Get TCB block of address
+        // -> Build TCP header
+
+        // Build full packet
+        const ip_len = 20;
+        const tcp_len = 20;
+        const max_data_size = 1000;
+        const max_packet_size = ip_len + tcp_len + max_data_size;
+        std.debug.print("Expected packet header length: {}\n", .{ip_len + tcp_len});
+
+        // Allocate buffer
+        var packet_buffer: [max_packet_size]u8 = undefined;
+
+        // IP Header
+        packet_buffer[0] = 0x45; // Version+IHL
+        packet_buffer[1] = 0x00; // TOS
+        packet_buffer[2] = 0x00;
+        packet_buffer[3] = 0x37; // Total length (0x0037)
+        packet_buffer[4] = 0x00;
+        packet_buffer[5] = 0x00; // ID
+        packet_buffer[6] = 0x00;
+        packet_buffer[7] = 0x00; // Flags+Fragment offset
+        packet_buffer[8] = 64; // TTL
+        packet_buffer[9] = 6; // Protocol (TCP)
+        packet_buffer[10] = 0x22;
+        packet_buffer[11] = 0xAE; // Header checksum
+        packet_buffer[12] = 172;
+        packet_buffer[13] = 25;
+        packet_buffer[14] = 0;
+        packet_buffer[15] = 3; // Source IP
+        packet_buffer[16] = 172;
+        packet_buffer[17] = 25;
+        packet_buffer[18] = 0;
+        packet_buffer[19] = 2; // Destination IP
+
+        // TCP Header
+        const tcp_start = ip_len;
+        packet_buffer[tcp_start + 0] = 0x0F;
+        packet_buffer[tcp_start + 1] = 0xA1; // Source port (4001)
+        packet_buffer[tcp_start + 2] = 0x0F;
+        packet_buffer[tcp_start + 3] = 0xA0; // Destination port (4000)
+        packet_buffer[tcp_start + 4] = 0x00;
+        packet_buffer[tcp_start + 5] = 0x00;
+        packet_buffer[tcp_start + 6] = 0x00;
+        packet_buffer[tcp_start + 7] = 0x00; // Seq num
+        packet_buffer[tcp_start + 8] = 0x00;
+        packet_buffer[tcp_start + 9] = 0x00;
+        packet_buffer[tcp_start + 10] = 0x00;
+        packet_buffer[tcp_start + 11] = 0x00; // Ack num
+        packet_buffer[tcp_start + 12] = 0x50; // Data offset (5 << 4), Reserved
+        packet_buffer[tcp_start + 13] = 0x02; // Flags (SYN)
+        packet_buffer[tcp_start + 14] = 0x20;
+        packet_buffer[tcp_start + 15] = 0x00; // Window size (8192)
+        packet_buffer[tcp_start + 16] = 0x51;
+        packet_buffer[tcp_start + 17] = 0x85; // Checksum
+        packet_buffer[tcp_start + 18] = 0x00;
+        packet_buffer[tcp_start + 19] = 0x00; // Urgent pointer
+
+        // Data
+        const data_start = ip_len + tcp_len;
+        std.mem.copyForwards(u8, packet_buffer[data_start..], buf.*);
+
+        // truncate unused
+        const final_packet = packet_buffer[0 .. data_start + buf.len];
+        std.debug.print("Final packet length: {}\n", .{final_packet.len});
+
+        // Send to destination address through raw socket
+        const address = std.net.Address{ .in = dest_addr.? };
+
+        print("Sending to {any}\n", .{address});
+
+        return posix.sendto(socket_t, final_packet, 0, &address.any, dest_addr.?.getOsSockLen());
+    }
 
     // Receives data to a connected destination
     pub fn recv() !usize {}
