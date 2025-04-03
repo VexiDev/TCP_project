@@ -1,92 +1,17 @@
 const std = @import("std");
 const posix = std.posix;
+
+const tcp = @import("tcp.zig");
+const ip = @import("ip.zig");
+
 const Ip4Address = std.net.Ip4Address;
 const time = std.time;
 const print = std.debug.print;
 
-const Status = union(enum) { //
-    LISTEN,
-    SYN_SENT,
-    SYN_RECEIVED,
-    ESTABLISHED,
-    FIN_WAIT_1,
-    FIN_WAIT_2,
-    CLOSE_WAIT,
-    CLOSING,
-    LAST_ACK,
-    TIME_WAIT,
-    CLOSED,
-};
-
-const FLAG = enum(u8) { //
-    CWR = 1,
-    ECE = 2,
-    URG = 4,
-    ACK = 8,
-    PSH = 16,
-    RST = 32,
-    SYN = 64,
-    FIN = 128,
-    SYN_ACK = 8 & 64,
-};
-
-// Transport Control Block
-const TCB = struct {
-    status: Status,
-
-    una_seq: u32, // unacknowledged seq number (current)
-    nxt_rcv: u32, // next expected sequence number
-    nxt_seq: u32, // next sequence number
-
-    rcv_wnd: u16, // receive window size
-    snd_wnd: u16, // send window size
-
-    rcv_bfr: []u8, // receive buffer
-    snd_bfr: []u8, // send buffer
-
-    src_addr: Ip4Address,
-    dest_addr: Ip4Address,
-
-    last_ack_time: i64, // ms since 1970-01-01
-
-    pub fn init(
-        src_addr: Ip4Address,
-        dest_addr: Ip4Address,
-        alloc: *std.heap.ArenaAllocator,
-    ) !TCB {
-        const allocator = alloc.allocator();
-
-        // init buffers
-        const rcv_bfr = try allocator.alloc(u8, 1000);
-        @memset(rcv_bfr, 0);
-        const snd_bfr = try allocator.alloc(u8, 1000);
-        @memset(snd_bfr, 0);
-
-        return TCB{
-            .status = Status.CLOSED,
-
-            .una_seq = 1,
-            .nxt_rcv = 1,
-            .nxt_seq = 2,
-
-            .rcv_wnd = 1000,
-            .snd_wnd = 1000,
-
-            .rcv_bfr = rcv_bfr,
-            .snd_bfr = snd_bfr,
-
-            .src_addr = src_addr,
-            .dest_addr = dest_addr,
-
-            .last_ack_time = 0,
-        };
-    }
-};
-
 // Returns a new posix socket
 pub fn socket() !posix.socket_t {
     const sock = try posix.socket(posix.AF.INET, posix.SOCK.RAW, posix.IPPROTO.TCP);
-    // -- DISABLE KERNEL IP HEADERS
+    // -- DISABLE KERNEL IP HEADER
     try std.posix.setsockopt(
         sock,
         std.os.linux.IPPROTO.IP,
@@ -101,7 +26,10 @@ pub fn close(socket_t: posix.socket_t) void {
     posix.close(socket_t);
 }
 
-// Binds a socket to an address
+// Binds a socket to an Address
+// -
+// Since we are not filtering packets directly off the wire
+// we must bind our raw TCP socket to an address
 pub fn bind(socket_t: posix.socket_t, addr: Ip4Address) !void {
     const address = std.net.Address{ .in = addr };
     return posix.bind(socket_t, &address.any, address.getOsSockLen());
@@ -109,7 +37,7 @@ pub fn bind(socket_t: posix.socket_t, addr: Ip4Address) !void {
 
 pub const StateMachine = struct {
     allocator: std.heap.ArenaAllocator,
-    TCB_table: std.AutoHashMap(Ip4Address, *TCB), // dest_addr, TCB
+    TCB_table: std.AutoHashMap(Ip4Address, *tcp.block), // dest_addr, TCB
     connections: std.AutoHashMap(posix.socket_t, Ip4Address), // src_addr, socket
 
     // Initialize Protocol
@@ -122,7 +50,7 @@ pub const StateMachine = struct {
         self.* = StateMachine{
             .allocator = arena_ptr.*,
             // Init TCB table
-            .TCB_table = std.AutoHashMap(Ip4Address, *TCB).init(arena_ptr.allocator()),
+            .TCB_table = std.AutoHashMap(Ip4Address, *tcp.block).init(arena_ptr.allocator()),
             // Init Socket table
             .connections = std.AutoHashMap(posix.socket_t, Ip4Address).init(arena_ptr.allocator()),
         };
@@ -150,8 +78,8 @@ pub const StateMachine = struct {
 
         // bind TCB to address
         const allocator = self.allocator.allocator();
-        const blank_tcb = try allocator.create(TCB);
-        blank_tcb.* = try TCB.init(dest_addr, dest_addr, &self.allocator);
+        const blank_tcb = try allocator.create(tcp.block);
+        blank_tcb.* = try tcp.block.init(dest_addr, dest_addr, &self.allocator);
         try self.TCB_table.put(dest_addr, blank_tcb);
 
         // TODO: 3w handshake implementation
@@ -165,19 +93,18 @@ pub const StateMachine = struct {
 
     // Sends data to a connected destination
     pub fn send(self: *StateMachine, socket_t: posix.socket_t, buf: *[]const u8) !usize {
-
         const ip_len = 20;
         const tcp_len = 20;
         const max_data_size = 1000;
         const max_packet_size = ip_len + tcp_len + max_data_size;
-        
+
         if (buf.*.len > max_data_size) return error.DataTooBig;
-    
+
         // Get socket info:
         // -> Get destination from TCB block
         const dest_addr: ?Ip4Address = self.connections.get(socket_t);
         if (dest_addr == null) return error.SocketNotConnected;
-        const connection_TCB: ?*TCB = self.TCB_table.get(dest_addr.?);
+        const connection_TCB: ?*tcp.block = self.TCB_table.get(dest_addr.?);
         if (connection_TCB == null) return error.AddressMissingTCB;
 
         // IP:
@@ -188,7 +115,7 @@ pub const StateMachine = struct {
         // -> Build TCP header
 
         // Build full packet
-        std.debug.print("Expected header lengths: IP={}, TCP={}\n", .{ip_len, tcp_len});
+        std.debug.print("Expected header lengths: IP={}, TCP={}\n", .{ ip_len, tcp_len });
         std.debug.print("Data size: {}\n", .{buf.*.len});
 
         // Allocate buffer
