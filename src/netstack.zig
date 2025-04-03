@@ -29,7 +29,8 @@ pub fn close(socket_t: posix.socket_t) void {
 // Binds a socket to an Address
 // -
 // Since we are not filtering packets directly off the wire
-// we must bind our raw TCP socket to an address
+// we must bind our raw TCP socket to an address and have the
+// kernel pass TCP packets for that address to our socket
 pub fn bind(socket_t: posix.socket_t, addr: Ip4Address) !void {
     const address = std.net.Address{ .in = addr };
     return posix.bind(socket_t, &address.any, address.getOsSockLen());
