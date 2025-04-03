@@ -9,7 +9,7 @@ pub fn main() !void {
     const server_sock = try posix.socket(posix.AF.INET, posix.SOCK.STREAM, 0);
     defer posix.close(server_sock);
 
-    const addr = try net.Address.parseIp4("127.0.0.1", 4000);
+    const addr = try net.Address.parseIp4("0.0.0.0", 4000);
 
     // bind socket to address
     posix.bind(server_sock, &addr.any, addr.getOsSockLen()) catch |err| {
