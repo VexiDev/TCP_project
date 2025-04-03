@@ -83,7 +83,31 @@ const TCB = struct {
     }
 };
 
-const StateMachine = struct {
+// Returns a new posix socket
+pub fn socket() !posix.socket_t {
+    const sock = try posix.socket(posix.AF.INET, posix.SOCK.RAW, posix.IPPROTO.TCP);
+    // -- DISABLE KERNEL IP HEADERS
+    try std.posix.setsockopt(
+        sock,
+        std.os.linux.IPPROTO.IP,
+        std.os.linux.IP.HDRINCL,
+        &std.mem.toBytes(@as(c_int, 1)),
+    );
+    return sock;
+}
+
+// Closes an opened socket
+pub fn close(socket_t: posix.socket_t) void {
+    posix.close(socket_t);
+}
+
+// Binds a socket to an address
+pub fn bind(socket_t: posix.socket_t, addr: Ip4Address) !void {
+    const address = std.net.Address{ .in = addr };
+    return posix.bind(socket_t, &address.any, address.getOsSockLen());
+}
+
+pub const StateMachine = struct {
     allocator: std.heap.ArenaAllocator,
     // TCB_tbl:
     // SOCK_tbl
