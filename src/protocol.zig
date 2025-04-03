@@ -250,6 +250,31 @@ pub const StateMachine = struct {
         return posix.sendto(socket_t, final_packet, 0, &address.any, dest_addr.?.getOsSockLen());
     }
 
-    // Receives data to a connected destination
-    pub fn recv() !usize {}
+    // Receives data from a connected destination
+    pub fn recv(self: *StateMachine, socket_t: posix.socket_t, buf: *[]u8) !usize {
+        // Get socket info:
+        // -> Get from addr TCB block
+        _ = self;
+        //const conn_addr: ?Ip4Address = self.connections.get(socket_t);
+        //if (conn_addr == null) return error.SocketNotConnected;
+        //const connection_TCB: ?TCB = self.TCB_table.get(conn_addr);
+        //if (connection_TCB == null) return error.AddressMissingTCB;
+
+        var from_addr: posix.sockaddr = undefined;
+        var from_addr_len: posix.socklen_t = @sizeOf(posix.sockaddr);
+        const bytes = posix.recvfrom(socket_t, buf.*, 0, &from_addr, &from_addr_len) catch |err| {
+            return err;
+        };
+
+        // IP:
+        // -> Parse IP header
+        // -> Validate IP
+
+        // TCP:
+        // -> Parse TCP header
+        // -> Get TCB block of address
+        // -> Cast TCP magic to ensure correctness
+
+        return bytes;
+    }
 };
