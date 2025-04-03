@@ -1,5 +1,5 @@
 const std = @import("std");
-const protocol = @import("./protocol.zig");
+const protocol = @import("./netstack.zig");
 const net = std.net;
 const posix = std.posix;
 
