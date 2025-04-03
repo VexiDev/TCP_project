@@ -1,7 +1,14 @@
 FROM debian:latest
 
 # Install dependencies
-RUN apt-get update && apt-get install -y curl xz-utils git tcpdump && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        xz-utils \
+        git \
+        tcpdump \
+    && \
+    rm -rf /var/lib/apt/lists/
 
 # Set Zig version
 ENV ZIG_VERSION=0.14.0
