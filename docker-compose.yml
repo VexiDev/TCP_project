@@ -1,0 +1,34 @@
+services:
+  server:
+    image: ziggy
+    build: ./server
+    container_name: server
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    volumes:
+      - .:/root/tcp_project/
+    working_dir: /root/tcp_project
+    command: sh -c "zig run src/custom-server.zig -freference-trace=9"
+    networks:
+      - testnet
+
+  client:
+    image: ziggy
+    build: ./client
+    container_name: client
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    depends_on:
+      - server
+    volumes:
+      - .:/root/tcp_project
+    working_dir: /root/tcp_project
+    command: sh -c "zig run src/custom-client.zig -freference-trace=9"
+    networks:
+      - testnet
+
+networks:
+  testnet:
+
