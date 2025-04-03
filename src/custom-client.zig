@@ -28,9 +28,9 @@ pub fn main() !void {
     var msg: []const u8 = data[0..];
 
     for (0..100) |_| {
-        std.debug.print("Sending packet to {any}\n", .{ip_bytes});
+        //std.debug.print("Sending packet to {any}\n", .{ip_bytes});
         const bytes = try proto.send(socket, &msg);
-        std.debug.print("Sent {d} bytes!", .{bytes});
+        std.debug.print("Sent {d} bytes to {any}\n", .{bytes, ip_bytes});
         std.time.sleep(5 * 1_000_000_000);
     }
 }
