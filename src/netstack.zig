@@ -165,6 +165,14 @@ pub const StateMachine = struct {
 
     // Sends data to a connected destination
     pub fn send(self: *StateMachine, socket_t: posix.socket_t, buf: *[]const u8) !usize {
+
+        const ip_len = 20;
+        const tcp_len = 20;
+        const max_data_size = 1000;
+        const max_packet_size = ip_len + tcp_len + max_data_size;
+        
+        if (buf.*.len > max_data_size) return error.DataTooBig;
+    
         // Get socket info:
         // -> Get destination from TCB block
         const dest_addr: ?Ip4Address = self.connections.get(socket_t);
@@ -180,11 +188,8 @@ pub const StateMachine = struct {
         // -> Build TCP header
 
         // Build full packet
-        const ip_len = 20;
-        const tcp_len = 20;
-        const max_data_size = 1000;
-        const max_packet_size = ip_len + tcp_len + max_data_size;
-        std.debug.print("Expected packet header length: {}\n", .{ip_len + tcp_len});
+        std.debug.print("Expected header lengths: IP={}, TCP={}\n", .{ip_len, tcp_len});
+        std.debug.print("Data size: {}\n", .{buf.*.len});
 
         // Allocate buffer
         var packet_buffer: [max_packet_size]u8 = undefined;
@@ -259,7 +264,7 @@ pub const StateMachine = struct {
         std.mem.copyForwards(u8, packet_buffer[data_start..], buf.*);
 
         // truncate unused
-        const final_packet = packet_buffer[0 .. data_start + buf.len];
+        const final_packet = packet_buffer[0 .. data_start + buf.*.len];
         std.debug.print("Final packet length: {}\n", .{final_packet.len});
 
         // Send to destination address through raw socket
