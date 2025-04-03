@@ -1,9 +1,10 @@
 const std = @import("std");
 const posix = std.posix;
+const Ip4Address = std.net.Ip4Address;
 const time = std.time;
 const print = std.debug.print;
 
-pub const Status = union(enum) { //
+const Status = union(enum) { //
     LISTEN,
     SYN_SENT,
     SYN_RECEIVED,
@@ -17,7 +18,7 @@ pub const Status = union(enum) { //
     CLOSED,
 };
 
-pub const FLAG = enum(u8) { //
+const FLAG = enum(u8) { //
     CWR = 1,
     ECE = 2,
     URG = 4,
@@ -29,33 +30,22 @@ pub const FLAG = enum(u8) { //
     SYN_ACK = 8 & 64,
 };
 
-const addr_pair = struct {
-    src_addr: [4]u8,
-    src_port: u16,
-    dst_addr: [4]u8,
-    dst_port: u16,
-};
-
-const StreamSocket = struct {
-    id: u16,
-    socket_t: posix.socket_t,
-};
-
 // Transport Control Block
 const TCB = struct {
     status: Status,
 
-    addr_pair: *addr_pair,
-
     una_seq: u32, // unacknowledged seq number (current)
-    nxt_seq: u32, // next sequence number
     nxt_rcv: u32, // next expected sequence number
+    nxt_seq: u32, // next sequence number
 
     rcv_wnd: u16, // receive window size
     snd_wnd: u16, // send window size
 
-    rcv_bfr: *[]const u8, // receive buffer
-    snd_bfr: *[]const u8, // send buffer
+    rcv_bfr: []u8, // receive buffer
+    snd_bfr: []u8, // send buffer
+
+    src_addr: Ip4Address,
+    dest_addr: Ip4Address,
 
     last_ack_time: i64, // ms since 1970-01-01
 };
