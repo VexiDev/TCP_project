@@ -109,14 +109,25 @@ pub fn bind(socket_t: posix.socket_t, addr: Ip4Address) !void {
 
 pub const StateMachine = struct {
     allocator: std.heap.ArenaAllocator,
-    // TCB_tbl:
-    // SOCK_tbl
+    TCB_table: std.AutoHashMap(Ip4Address, *TCB), // dest_addr, TCB
+    connections: std.AutoHashMap(posix.socket_t, Ip4Address), // src_addr, socket
 
     // Initialize Protocol
-    pub fn init() StateMachine {
+    pub fn init(allocator: std.mem.Allocator) !*StateMachine {
         // Init protocol allocator
-        // Init Socket table
-        // Init TCB table
+        const arena_ptr = try allocator.create(std.heap.ArenaAllocator);
+        arena_ptr.* = std.heap.ArenaAllocator.init(allocator);
+        const self = try allocator.create(StateMachine);
+
+        self.* = StateMachine{
+            .allocator = arena_ptr.*,
+            // Init TCB table
+            .TCB_table = std.AutoHashMap(Ip4Address, *TCB).init(arena_ptr.allocator()),
+            // Init Socket table
+            .connections = std.AutoHashMap(posix.socket_t, Ip4Address).init(arena_ptr.allocator()),
+        };
+
+        return self;
     }
 
     // Cleanly shutdown the protocol
@@ -124,6 +135,8 @@ pub const StateMachine = struct {
         // Prevents new connections
         // Resets existing connections
         // Free all allocated memory
+        self.TCB_table.deinit();
+        self.connections.deinit();
         self.allocator.deinit();
     }
 
