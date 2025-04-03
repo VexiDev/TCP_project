@@ -140,20 +140,28 @@ pub const StateMachine = struct {
         self.allocator.deinit();
     }
 
-    // Returns a new TCP socket
-    pub fn socket() !StreamSocket {}
-
-    // Binds a socket to an address, storing it in the Socket table
-    pub fn bind() !void {}
-
     // Requests a connection with a destination address that is listening
-    pub fn connect() !void {}
+    pub fn connect(self: *StateMachine, socket_t: posix.socket_t, dest_addr: Ip4Address) !void {
+        if (self.connections.contains(socket_t)) return error.SocketAlreadyConnected;
+        if (self.TCB_table.contains(dest_addr)) return error.AddressInUse;
+
+        // bind destination to socket
+        try self.connections.put(socket_t, dest_addr);
+
+        // bind TCB to address
+        const allocator = self.allocator.allocator();
+        const blank_tcb = try allocator.create(TCB);
+        blank_tcb.* = try TCB.init(dest_addr, dest_addr, &self.allocator);
+        try self.TCB_table.put(dest_addr, blank_tcb);
+
+        // TODO: 3w handshake implementation
+    }
 
     // Allows a socket to handle(i.e. queue) incoming connection requests
-    pub fn listen() !void {}
+    //pub fn listen(self: *StateMachine) !void {}
 
     // Polls next queued connection request and establishes connection - BLOCKING
-    pub fn accept() !void {}
+    //pub fn accept(self: *StateMachine) !void {}
 
     // Sends data to a connected destination
     pub fn send() !usize {}
