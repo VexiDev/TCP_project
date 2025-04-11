@@ -92,6 +92,15 @@ pub const StateMachine = struct {
     // Polls next queued connection request and establishes connection - BLOCKING
     //pub fn accept(self: *StateMachine) !void {}
 
+    // Sends buf to dest_addr using IPv4
+    pub fn sendto(self: *StateMachine, socket_t: posix.socket_t, buf: *[]const u8, dest_addr: Ip4Address) !usize {
+        const src_addr = dest_addr;
+        const ip_hdr: [40]u8 = undefined;
+        ip.build(&ip_hdr, src_addr, dest_addr, buf);
+
+        return posix.sendto(socket_t, final_packet, 0, &address.any, dest_addr.?.getOsSockLen());
+    }
+
     // Sends data to a connected destination
     pub fn send(self: *StateMachine, socket_t: posix.socket_t, buf: *[]const u8) !usize {
         const ip_len = 20;
