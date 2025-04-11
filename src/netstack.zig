@@ -10,7 +10,7 @@ const print = std.debug.print;
 
 // Returns a new posix socket
 pub fn socket() !posix.socket_t {
-    const sock = try posix.socket(posix.AF.INET, posix.SOCK.RAW, posix.IPPROTO.TCP);
+    const sock = try posix.socket(posix.AF.INET, posix.SOCK.RAW, posix.IPPROTO.ICMP);
     // -- DISABLE KERNEL IP HEADER
     try std.posix.setsockopt(
         sock,
