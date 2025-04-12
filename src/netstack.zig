@@ -3,6 +3,7 @@ const posix = std.posix;
 
 const tcp = @import("tcp.zig");
 const ip = @import("ip.zig");
+const icmp = @import("icmp.zig");
 
 const Ip4Address = std.net.Ip4Address;
 const time = std.time;
@@ -93,12 +94,17 @@ pub const StateMachine = struct {
     //pub fn accept(self: *StateMachine) !void {}
 
     // Sends buf to dest_addr using IPv4
-    pub fn sendto(self: *StateMachine, socket_t: posix.socket_t, buf: *[]const u8, dest_addr: Ip4Address) !usize {
-        const src_addr = dest_addr;
-        const ip_hdr: [40]u8 = undefined;
-        ip.build(&ip_hdr, src_addr, dest_addr, buf);
+    pub fn sendto(self: *StateMachine, socket_t: posix.socket_t, buf: *[]const u8, src_addr: Ip4Address, dest_addr: Ip4Address) !usize {
+        _ = self;
+        _ = buf;
+        var packet: [28]u8 = undefined;
+        try ip.build(&packet, src_addr, dest_addr, 1, 8);
 
-        return posix.sendto(socket_t, final_packet, 0, &address.any, dest_addr.?.getOsSockLen());
+        // insert ICMP
+        try icmp.icmp_ping(&packet, false);
+
+        const address = std.net.Address{ .in = dest_addr };
+        return posix.sendto(socket_t, &packet, 0, &address.any, dest_addr.getOsSockLen());
     }
 
     // Sends data to a connected destination
