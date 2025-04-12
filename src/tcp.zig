@@ -27,11 +27,11 @@ const FLAG = enum(u8) { //
     RST = 32,
     SYN = 64,
     FIN = 128,
-    SYN_ACK = 8 & 64,
+    SYN_ACK = 8 | 64,
 };
 
 // Transport Control Block
-pub const block = struct {
+pub const tcb_t = struct {
     status: Status,
 
     una_seq: u32, // unacknowledged seq number (current)
@@ -53,7 +53,7 @@ pub const block = struct {
         src_addr: Ip4Address,
         dest_addr: Ip4Address,
         alloc: *std.heap.ArenaAllocator,
-    ) !block {
+    ) !tcb_t {
         const allocator = alloc.allocator();
 
         // init buffers
@@ -62,7 +62,7 @@ pub const block = struct {
         const snd_bfr = try allocator.alloc(u8, 1000);
         @memset(snd_bfr, 0);
 
-        return block{
+        return tcb_t{
             .status = Status.CLOSED,
 
             .una_seq = 1,
