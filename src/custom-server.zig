@@ -23,7 +23,6 @@ pub fn main() !void {
         const port = std.mem.bigToNative(u16, src.sa.port); // network byte order → native
         std.debug.print("\nWaiting for bytes on {d}.{d}.{d}.{d}:{d}\n", .{ ip_bytes[0], ip_bytes[1], ip_bytes[2], ip_bytes[3], port });
         const bytes = try proto.recv(socket, &buffer);
-
         std.debug.print("{d} - Received {d} bytes:\n{s}\n", .{ i, bytes, buffer });
     }
 }
