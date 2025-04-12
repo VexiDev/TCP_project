@@ -2,9 +2,18 @@ const std = @import("std");
 
 const Ip4Address = std.net.Ip4Address;
 
+fn add(a: u16, b: u16) u16 {
+    return a + b;
+}
+
+pub const PROTCOL = enum(u8) {
+    ICMP = 1,
+    TCP = 6,
+};
+
 const ip_hdr = packed struct { //
-    version: u4,
-    header_len: u4,
+    ver: u4,
+    len: u4,
     dscp: u6,
     ecn: u2,
     total_len: u16,
@@ -13,22 +22,22 @@ const ip_hdr = packed struct { //
     frag_offset: u13,
     ttl: u8,
     protocol: u8,
-    hdr_checksum: u16,
+    checksum: u16,
     src_addr: u32,
     dest_addr: u32,
 };
 
 pub fn build( //
-    hdr_out: *[]u8,
+    hdr_out: *[20]u8,
     src: Ip4Address,
     dest: Ip4Address,
-    proto: u8,
-    data_len: u16,
+    proto: PROTCOL,
+    data_len: u16, // in bytes
 ) !void { //
     _ = proto;
 
     // build ip header struct
-    const header = ip_hdr{
+    var header = ip_hdr{
         .ver = 4, // ipv4
         .len = 5, // 5 * 32 bit words -> 20 bytes
         .dscp = 0, // diffserv -> normal traffic
@@ -38,39 +47,50 @@ pub fn build( //
         .flags = 2, // 010 -> don't fragment
         .frag_offset = 0, // to know which fragment relative of the first
         .ttl = 20, // time to live -> j setting to 20 for now will change as I read more RFCs
-        .protocol = 1, // ICMP for now -> will use the proto argument eventually
-        .checksum = 0, // computed at end
+        .protocol = 6, // ICMP for now -> will use the proto argument eventually
+        .checksum = 0, // computed later
         .src_addr = src.sa.addr,
         .dest_addr = dest.sa.addr,
     };
 
     // compute checksum
-    const sum = checksum(header);
-    header.hdr_checksum = sum;
+    var hdr_u8_buf: [20]u8 = undefined;
+    pack_ip_hdr(&hdr_u8_buf, header);
+    var sum = ip_hdr_checksum(hdr_u8_buf);
+    header.checksum = sum;
+    pack_ip_hdr(&hdr_u8_buf, header);
 
     // validate checksum
-    if (checksum(header) != 0) {
+    sum = ip_hdr_checksum(hdr_u8_buf);
+    if (sum != 0) {
         return error.InvalidCheckSum;
     }
 
     // fill packet out with header
-    const ptr: *const [20]u8 = @ptrCast(@as(*const u8, &ip_hdr));
-    const arr: [20]u8 = ptr.*;
-    for (arr, 0..20) |byte, i| {
+    for (hdr_u8_buf, 0..20) |byte, i| {
         hdr_out.*[i] = byte;
     }
 }
 
-fn add(a: u16, b: u16) u16 {
-    return a + b;
+fn pack_ip_hdr(buf: *[20]u8, hdr: ip_hdr) void {
+    buf[0] = (@as(u8, hdr.ver) << 4) | @as(u8, hdr.len);
+    buf[1] = (hdr.dscp << 2) | hdr.ecn;
+    std.mem.writeInt(u16, buf[2..4], hdr.total_len, .big);
+    std.mem.writeInt(u16, buf[4..6], hdr.id, .big);
+    std.mem.writeInt(u16, buf[6..8], (@as(u16, hdr.flags) << 13) | hdr.frag_offset, .big);
+    buf[8] = hdr.ttl;
+    buf[9] = hdr.protocol;
+    std.mem.writeInt(u16, buf[10..12], hdr.checksum, .big);
+    std.mem.writeInt(u32, buf[12..16], hdr.src_addr, .little);
+    std.mem.writeInt(u32, buf[16..20], hdr.dest_addr, .little);
 }
 
-fn checksum(hdr: ip_hdr) u16 {
-    const ptr: *const [10]u16 = @ptrCast(@as(*const u8, &hdr));
-    const arr: [10]u16 = ptr.*;
+fn ip_hdr_checksum(buf: [20]u8) u16 {
     var sum: u16 = 0;
-    for (arr) |v| {
-        sum +%= v; // overflow wrapping sum
+    var i: usize = 0;
+    while (i + 1 < buf.len) : (i += 2) {
+        const word = std.mem.readInt(u16, buf[i..][0..2], .big);
+        sum +%= word;
     }
-    return ~sum; // bitwise NOT
+    return ~sum;
 }
