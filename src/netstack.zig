@@ -39,7 +39,7 @@ pub fn bind(socket_t: posix.socket_t, addr: Ip4Address) !void {
 
 pub const StateMachine = struct {
     allocator: std.heap.ArenaAllocator,
-    TCB_table: std.AutoHashMap(Ip4Address, *tcp.block), // dest_addr, TCB
+    TCB_table: std.AutoHashMap(Ip4Address, *tcp.tcb_t), // dest_addr, TCB
     connections: std.AutoHashMap(posix.socket_t, Ip4Address), // src_addr, socket
 
     // Initialize Protocol
@@ -52,7 +52,7 @@ pub const StateMachine = struct {
         self.* = StateMachine{
             .allocator = arena_ptr.*,
             // Init TCB table
-            .TCB_table = std.AutoHashMap(Ip4Address, *tcp.block).init(arena_ptr.allocator()),
+            .TCB_table = std.AutoHashMap(Ip4Address, *tcp.tcb_t).init(arena_ptr.allocator()),
             // Init Socket table
             .connections = std.AutoHashMap(posix.socket_t, Ip4Address).init(arena_ptr.allocator()),
         };
@@ -80,8 +80,8 @@ pub const StateMachine = struct {
 
         // bind TCB to address
         const allocator = self.allocator.allocator();
-        const blank_tcb = try allocator.create(tcp.block);
-        blank_tcb.* = try tcp.block.init(dest_addr, dest_addr, &self.allocator);
+        const blank_tcb = try allocator.create(tcp.tcb_t);
+        blank_tcb.* = try tcp.tcb_t.init(dest_addr, dest_addr, &self.allocator);
         try self.TCB_table.put(dest_addr, blank_tcb);
 
         // TODO: 3w handshake implementation
@@ -118,9 +118,10 @@ pub const StateMachine = struct {
 
         // Get socket info:
         // -> Get destination from TCB block
+        const src_addr = try Ip4Address.resolveIp("0.0.0.0", 4001);
         const dest_addr: ?Ip4Address = self.connections.get(socket_t);
         if (dest_addr == null) return error.SocketNotConnected;
-        const connection_TCB: ?*tcp.block = self.TCB_table.get(dest_addr.?);
+        const connection_TCB: ?*tcp.tcb_t = self.TCB_table.get(dest_addr.?);
         if (connection_TCB == null) return error.AddressMissingTCB;
 
         // IP:
