@@ -11,7 +11,7 @@ const print = std.debug.print;
 
 // Returns a new posix socket
 pub fn socket() !posix.socket_t {
-    const sock = try posix.socket(posix.AF.INET, posix.SOCK.RAW, posix.IPPROTO.ICMP);
+    const sock = try posix.socket(posix.AF.INET, posix.SOCK.RAW, posix.IPPROTO.TCP);
     // -- DISABLE KERNEL IP HEADER
     try std.posix.setsockopt(
         sock,
@@ -124,12 +124,18 @@ pub const StateMachine = struct {
         const connection_TCB: ?*tcp.tcb_t = self.TCB_table.get(dest_addr.?);
         if (connection_TCB == null) return error.AddressMissingTCB;
 
-        // IP:
-        // -> Build IP header
 
         // TCP:
         // -> Get TCB block of address
         // -> Build TCP header
+        //const tcp_hdr_buf: [tcp_len]u8 = undefined;
+        //tcp.build(tcp_hdr_buf, connection_TCB, buf.*.len);
+
+        // IP:
+        // -> Build IP header
+        var ip_hdr_buf: [ip_len]u8 = undefined;
+        const data_len: u16 = @intCast(buf.*.len);
+        try ip.build(&ip_hdr_buf, src_addr, dest_addr.?, ip.PROTCOL.TCP, data_len);
 
         // Build full packet
         std.debug.print("Expected header lengths: IP={}, TCP={}\n", .{ ip_len, tcp_len });
@@ -139,37 +145,7 @@ pub const StateMachine = struct {
         var packet_buffer: [max_packet_size]u8 = undefined;
 
         // IP Header
-
-        // Version+IHL
-        packet_buffer[0] = 0x45;
-        // TOS
-        packet_buffer[1] = 0x00;
-        // Total length (0x0037)
-        packet_buffer[2] = 0x00;
-        packet_buffer[3] = 0x37;
-        // ID
-        packet_buffer[4] = 0x00;
-        packet_buffer[5] = 0x00;
-        // Flags+Fragment offset
-        packet_buffer[6] = 0x00;
-        packet_buffer[7] = 0x00;
-        // TTL
-        packet_buffer[8] = 64;
-        // Protocol (TCP)
-        packet_buffer[9] = 6;
-        // Header checksum
-        packet_buffer[10] = 0x22;
-        packet_buffer[11] = 0xAE;
-        // Source IP
-        packet_buffer[12] = 172;
-        packet_buffer[13] = 25;
-        packet_buffer[14] = 0;
-        packet_buffer[15] = 3;
-        // Destination IP
-        packet_buffer[16] = 172;
-        packet_buffer[17] = 25;
-        packet_buffer[18] = 0;
-        packet_buffer[19] = 2;
+        std.mem.copyForwards(u8, packet_buffer[0..ip_len], &ip_hdr_buf);
 
         // TCP Header
         const tcp_start = ip_len;
